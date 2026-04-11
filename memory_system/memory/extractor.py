@@ -16,6 +16,7 @@ from memory_system.core.memory_models import (
 class ExtractedFact(BaseModel):
     text: str
     memory_type: str = "semantic"  # semantic, episodic, procedural
+    importance: float = 0.5  # 0.0-1.0
 
 
 class ExtractedEntity(BaseModel):
@@ -55,6 +56,7 @@ async def extract_memories(
     user_id: str,
     llm_fn: Optional[Callable] = None,
     model: str = "groq/llama-3.1-8b-instant",
+    custom_prompt: Optional[str] = None,
 ) -> MemoryExtractionResult:
     """Extract facts, entities, and relationships from a conversation turn."""
 
@@ -67,7 +69,8 @@ async def extract_memories(
 
         client = instructor.from_litellm(acompletion)
 
-        prompt = EXTRACTION_PROMPT.format(
+        template = custom_prompt or EXTRACTION_PROMPT
+        prompt = template.format(
             user_message=user_message,
             assistant_response=assistant_response,
         )
@@ -96,6 +99,7 @@ async def extract_memories(
             memory_type=mem_type,
             user_id=user_id,
             source="chat",
+            importance=max(0.0, min(1.0, fact.importance)),
         ))
 
     entities = [

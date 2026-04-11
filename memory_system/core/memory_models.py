@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Optional
 from uuid import uuid4
@@ -19,8 +19,23 @@ class Memory(BaseModel):
     user_id: str
     metadata: dict[str, Any] = {}
     source: str = "chat"  # chat, email, voice, manual
+    importance: float = 0.5  # 0.0 = trivial, 1.0 = critical
+    access_count: int = 0
+    last_accessed: Optional[datetime] = None
+    ttl: Optional[int] = None  # Seconds until expiry (None = forever)
+    expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def model_post_init(self, __context):
+        if self.ttl and not self.expires_at:
+            self.expires_at = self.created_at + timedelta(seconds=self.ttl)
+
+    @property
+    def is_expired(self) -> bool:
+        if self.expires_at is None:
+            return False
+        return datetime.now(timezone.utc) >= self.expires_at
 
 
 class MemorySearchResult(BaseModel):
@@ -48,3 +63,27 @@ class MemoryExtractionResult(BaseModel):
     memories: list[Memory] = []
     entities: list[Entity] = []
     relationships: list[Relationship] = []
+
+
+class UserProfile(BaseModel):
+    user_id: str
+    properties: dict[str, Any] = {}  # name, location, preferences, etc.
+    summary: str = ""
+    memory_count: int = 0
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
+
+
+class MemoryStats(BaseModel):
+    total_memories: int = 0
+    by_type: dict[str, int] = {}
+    by_source: dict[str, int] = {}
+    avg_importance: float = 0.0
+    oldest: Optional[datetime] = None
+    newest: Optional[datetime] = None
+
+
+class ConversationSummary(BaseModel):
+    summary: str
+    key_facts: list[str] = []
+    turn_count: int = 0

@@ -19,6 +19,7 @@ from memory_system.core.protocols import GraphStore, MemoryStore
 from memory_system.config.loader import load_bot_config
 from memory_system.providers.session import SessionStore
 from memory_system.memory.manager import MemoryManager
+from memory_system.memory.memory import Memory as StandaloneMemory
 from memory_system.hooks import HookManager, EventType, Event
 from memory_system.cache import IntentCache
 from memory_system.analytics import AnalyticsCollector
@@ -69,7 +70,18 @@ class MemorySystem:
         if enable_embeddings:
             self._predictor.precompute_intent_embeddings(config)
 
-        # Memory manager (for persistent user memories)
+        # Standalone memory API (usable directly via ms.memory)
+        self._standalone_memory = None
+        if enable_memory and (memory_store or graph_store):
+            self._standalone_memory = StandaloneMemory(
+                store=memory_store,
+                graph=graph_store,
+                llm_fn=extraction_llm_fn,
+                extraction_model=extraction_model,
+                dedup_threshold=dedup_threshold,
+            )
+
+        # Memory manager (for pipeline integration)
         self._memory_manager = None
         if enable_memory and (memory_store or graph_store):
             self._memory_manager = MemoryManager(
@@ -224,6 +236,11 @@ class MemorySystem:
         return prediction
 
     # --- Properties ---
+
+    @property
+    def memory(self) -> StandaloneMemory | None:
+        """Direct access to the standalone Memory API."""
+        return self._standalone_memory
 
     @property
     def hooks(self) -> HookManager:
