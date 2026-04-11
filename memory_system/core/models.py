@@ -71,13 +71,15 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
-    intent: IntentPrediction
-    token_estimate: int = 0
-    full_prompt_estimate: int = 0
-    reduction_percent: float = 0.0
-    latency_ms: dict[str, float] = {}
+    knowledge_used: int = 0
     memories_recalled: int = 0
     memories_stored: int = 0
+    token_estimate: int = 0
+    latency_ms: dict[str, float] = {}
+    # Legacy fields (populated when using intent-based Pipeline)
+    intent: Optional[IntentPrediction] = None
+    full_prompt_estimate: int = 0
+    reduction_percent: float = 0.0
 
 
 class PipelineResult(BaseModel):

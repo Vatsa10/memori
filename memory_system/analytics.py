@@ -33,8 +33,9 @@ class AnalyticsCollector:
 
     def record(self, response: ChatResponse, cache_hit: bool = False):
         self._total_requests += 1
-        self._intent_counts[response.intent.intent_name] += 1
-        self._method_counts[response.intent.method.value] += 1
+        if response.intent:
+            self._intent_counts[response.intent.intent_name] += 1
+            self._method_counts[response.intent.method.value] += 1
         self._total_reduction += response.reduction_percent
         self._total_smart_tokens += response.token_estimate
         self._total_full_tokens += response.full_prompt_estimate
@@ -46,11 +47,11 @@ class AnalyticsCollector:
             self._latency_counts[stage] = self._latency_counts.get(stage, 0) + 1
 
         self._recent.append({
-            "intent": response.intent.intent_name,
-            "method": response.intent.method.value,
-            "confidence": response.intent.confidence,
+            "intent": response.intent.intent_name if response.intent else None,
+            "knowledge_used": response.knowledge_used,
+            "memories_recalled": response.memories_recalled,
+            "memories_stored": response.memories_stored,
             "token_estimate": response.token_estimate,
-            "full_prompt_estimate": response.full_prompt_estimate,
             "reduction_percent": response.reduction_percent,
             "latency_ms": response.latency_ms,
             "cache_hit": cache_hit,

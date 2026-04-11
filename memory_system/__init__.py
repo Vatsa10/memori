@@ -1,18 +1,11 @@
 from memory_system._client import MemorySystem
-from memory_system.memory.memory import Memory as StandaloneMemory
+from memory_system.memory.memory import Memory
 from memory_system.core.models import (
-    BotConfig,
-    IntentDefinition,
-    IntentPrediction,
-    PredictionMethod,
     ChatResponse,
     ConversationTurn,
-    PipelineResult,
-    AssembledContext,
-    SmartPrompt,
 )
 from memory_system.core.memory_models import (
-    Memory,
+    Memory as MemoryModel,
     MemoryType,
     MemorySearchResult,
     MemoryStats,
@@ -24,23 +17,16 @@ from memory_system.core.memory_models import (
 )
 from memory_system.hooks import HookManager, EventType, Event
 from memory_system.analytics import AnalyticsCollector
-from memory_system.cache import IntentCache
 
 __all__ = [
-    # Two entry points
-    "MemorySystem",       # Full pipeline: intent + context + memory
-    "StandaloneMemory",   # Pure memory API: no intents, no YAML
-    # Models
-    "BotConfig",
-    "IntentDefinition",
-    "IntentPrediction",
-    "PredictionMethod",
+    # Main entry points
+    "MemorySystem",     # Grounded chat system (knowledge + memory + LLM)
+    "Memory",           # Standalone memory API (plug into any agent)
+    # Response
     "ChatResponse",
     "ConversationTurn",
-    "PipelineResult",
-    "AssembledContext",
-    "SmartPrompt",
-    "Memory",
+    # Memory models
+    "MemoryModel",
     "MemoryType",
     "MemorySearchResult",
     "MemoryStats",
@@ -54,6 +40,5 @@ __all__ = [
     "EventType",
     "Event",
     "AnalyticsCollector",
-    "IntentCache",
 ]
-__version__ = "0.3.0"
+__version__ = "1.0.0"
