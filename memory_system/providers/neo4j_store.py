@@ -1,0 +1,138 @@
+"""Production Neo4j-backed graph store."""
+
+from typing import Optional
+
+from memory_system.core.memory_models import Entity, Relationship
+
+
+class Neo4jGraphStore:
+    """Entity-relationship graph store backed by Neo4j."""
+
+    def __init__(
+        self,
+        uri: str = "bolt://localhost:7687",
+        user: str = "neo4j",
+        password: str = "password",
+    ):
+        self._uri = uri
+        self._user = user
+        self._password = password
+        self._driver = None
+
+    def _get_driver(self):
+        if self._driver is None:
+            from neo4j import GraphDatabase
+            self._driver = GraphDatabase.driver(
+                self._uri, auth=(self._user, self._password)
+            )
+        return self._driver
+
+    async def ensure_indexes(self):
+        driver = self._get_driver()
+        with driver.session() as session:
+            session.run("CREATE INDEX IF NOT EXISTS FOR (e:Entity) ON (e.name)")
+            session.run("CREATE INDEX IF NOT EXISTS FOR (e:Entity) ON (e.user_id)")
+
+    async def add_entity(self, entity: Entity) -> None:
+        driver = self._get_driver()
+        with driver.session() as session:
+            session.run(
+                """
+                MERGE (e:Entity {name: $name, user_id: $user_id})
+                SET e.entity_type = $entity_type,
+                    e += $properties
+                """,
+                name=entity.name,
+                user_id=entity.user_id,
+                entity_type=entity.entity_type,
+                properties=entity.properties,
+            )
+
+    async def add_relationship(self, relationship: Relationship) -> None:
+        driver = self._get_driver()
+        with driver.session() as session:
+            session.run(
+                """
+                MERGE (s:Entity {name: $source, user_id: $user_id})
+                MERGE (t:Entity {name: $target, user_id: $user_id})
+                MERGE (s)-[r:RELATES_TO {type: $rel_type}]->(t)
+                SET r += $properties
+                """,
+                source=relationship.source_entity,
+                target=relationship.target_entity,
+                user_id=relationship.user_id,
+                rel_type=relationship.relation_type,
+                properties=relationship.properties,
+            )
+
+    async def search_entities(
+        self, query: str, user_id: str, k: int = 5
+    ) -> list[Entity]:
+        driver = self._get_driver()
+        with driver.session() as session:
+            result = session.run(
+                """
+                MATCH (e:Entity {user_id: $user_id})
+                WHERE toLower(e.name) CONTAINS toLower($query)
+                   OR toLower(e.entity_type) CONTAINS toLower($query)
+                RETURN e.name AS name, e.entity_type AS entity_type,
+                       e.user_id AS user_id, properties(e) AS props
+                LIMIT $k
+                """,
+                query=query,
+                user_id=user_id,
+                k=k,
+            )
+            entities = []
+            for record in result:
+                props = dict(record["props"])
+                props.pop("name", None)
+                props.pop("entity_type", None)
+                props.pop("user_id", None)
+                entities.append(Entity(
+                    name=record["name"],
+                    entity_type=record["entity_type"] or "unknown",
+                    user_id=record["user_id"],
+                    properties=props,
+                ))
+            return entities
+
+    async def get_related(
+        self,
+        entity_name: str,
+        user_id: str,
+        relation_type: Optional[str] = None,
+    ) -> list[Relationship]:
+        driver = self._get_driver()
+        with driver.session() as session:
+            if relation_type:
+                query = """
+                    MATCH (s:Entity {user_id: $user_id})-[r:RELATES_TO {type: $rel_type}]-(t:Entity)
+                    WHERE s.name = $name
+                    RETURN s.name AS source, t.name AS target, r.type AS rel_type, properties(r) AS props
+                """
+                result = session.run(query, name=entity_name, user_id=user_id, rel_type=relation_type)
+            else:
+                query = """
+                    MATCH (s:Entity {user_id: $user_id})-[r:RELATES_TO]-(t:Entity)
+                    WHERE s.name = $name
+                    RETURN s.name AS source, t.name AS target, r.type AS rel_type, properties(r) AS props
+                """
+                result = session.run(query, name=entity_name, user_id=user_id)
+
+            relationships = []
+            for record in result:
+                props = dict(record["props"])
+                props.pop("type", None)
+                relationships.append(Relationship(
+                    source_entity=record["source"],
+                    target_entity=record["target"],
+                    relation_type=record["rel_type"] or "related",
+                    user_id=user_id,
+                    properties=props,
+                ))
+            return relationships
+
+    def close(self):
+        if self._driver:
+            self._driver.close()

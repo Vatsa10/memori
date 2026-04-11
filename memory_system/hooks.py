@@ -11,6 +11,8 @@ class EventType(str, Enum):
     PROMPT_BUILT = "prompt_built"
     RESPONSE_GENERATED = "response_generated"
     CACHE_HIT = "cache_hit"
+    MEMORIES_RECALLED = "memories_recalled"
+    MEMORIES_STORED = "memories_stored"
     ERROR = "error"
 
 

@@ -6,11 +6,17 @@ def estimate_tokens(text: str) -> int:
     return int(len(text.split()) * 1.3)
 
 
-def build_smart_prompt(context: AssembledContext) -> SmartPrompt:
-    """Build a minimal prompt from assembled context."""
+def build_smart_prompt(
+    context: AssembledContext,
+    recalled_memories: str | None = None,
+) -> SmartPrompt:
+    """Build a minimal prompt from assembled context + recalled memories."""
 
     # Build system message
     system_parts = [context.instructions]
+
+    if recalled_memories:
+        system_parts.append(f"\n## User Memories\n{recalled_memories}")
 
     if context.retrieved_context:
         system_parts.append(f"\n## Relevant Information\n{context.retrieved_context}")
