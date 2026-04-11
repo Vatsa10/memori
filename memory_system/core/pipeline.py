@@ -1,21 +1,21 @@
 import time
 from typing import Callable, Optional
 
-from smartcontext.core.models import (
+from memory_system.core.models import (
     BotConfig,
     ConversationTurn,
     IntentPrediction,
     PipelineResult,
 )
-from smartcontext.core.intent_predictor import IntentPredictor
-from smartcontext.core.context_assembler import ContextAssembler, MemorySearcher
-from smartcontext.core.prompt_builder import (
+from memory_system.core.intent_predictor import IntentPredictor
+from memory_system.core.context_assembler import ContextAssembler, MemorySearcher
+from memory_system.core.prompt_builder import (
     build_smart_prompt,
     build_full_prompt_estimate,
     smart_prompt_to_messages,
 )
-from smartcontext.providers.llm import call_llm as default_call_llm
-from smartcontext.providers.llm import predict_intent_llm as default_predict_intent_llm
+from memory_system.providers.llm import call_llm as default_call_llm
+from memory_system.providers.llm import predict_intent_llm as default_predict_intent_llm
 
 
 class Pipeline:

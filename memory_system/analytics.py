@@ -2,7 +2,7 @@ from collections import Counter, deque
 from dataclasses import dataclass, field
 from typing import Any
 
-from smartcontext.core.models import ChatResponse
+from memory_system.core.models import ChatResponse
 
 
 @dataclass

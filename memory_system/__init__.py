@@ -1,5 +1,5 @@
-from smartcontext._client import SmartContext
-from smartcontext.core.models import (
+from memory_system._client import MemorySystem
+from memory_system.core.models import (
     BotConfig,
     IntentDefinition,
     IntentPrediction,
@@ -10,12 +10,12 @@ from smartcontext.core.models import (
     AssembledContext,
     SmartPrompt,
 )
-from smartcontext.hooks import HookManager, EventType, Event
-from smartcontext.analytics import AnalyticsCollector
-from smartcontext.cache import IntentCache
+from memory_system.hooks import HookManager, EventType, Event
+from memory_system.analytics import AnalyticsCollector
+from memory_system.cache import IntentCache
 
 __all__ = [
-    "SmartContext",
+    "MemorySystem",
     "BotConfig",
     "IntentDefinition",
     "IntentPrediction",

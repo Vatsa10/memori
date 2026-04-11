@@ -1,7 +1,7 @@
 import pytest
-from smartcontext.core.context_assembler import ContextAssembler
-from smartcontext.core.models import IntentPrediction, PredictionMethod
-from smartcontext.providers.memory import InMemoryProvider
+from memory_system.core.context_assembler import ContextAssembler
+from memory_system.core.models import IntentPrediction, PredictionMethod
+from memory_system.providers.memory import InMemoryProvider
 
 
 @pytest.fixture

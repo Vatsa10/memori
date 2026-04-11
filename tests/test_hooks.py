@@ -1,5 +1,5 @@
 import pytest
-from smartcontext.hooks import HookManager, EventType, Event
+from memory_system.hooks import HookManager, EventType, Event
 
 
 class TestHookManager:

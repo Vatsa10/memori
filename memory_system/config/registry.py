@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from smartcontext.core.models import BotConfig
-from smartcontext.config.loader import load_all_configs
+from memory_system.core.models import BotConfig
+from memory_system.config.loader import load_all_configs
 
 
 class BotRegistry:

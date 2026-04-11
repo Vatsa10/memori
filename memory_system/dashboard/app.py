@@ -1,4 +1,4 @@
-"""Lightweight analytics dashboard for SmartContext."""
+"""Lightweight analytics dashboard for MemorySystem."""
 
 from typing import Any
 
@@ -8,7 +8,7 @@ DASHBOARD_HTML = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartContext Dashboard</title>
+    <title>MemorySystem Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -37,7 +37,7 @@ DASHBOARD_HTML = """
 </head>
 <body>
     <div class="container">
-        <h1>SmartContext Dashboard</h1>
+        <h1>MemorySystem Dashboard</h1>
 
         <div class="grid" id="stats-grid"></div>
 
@@ -146,13 +146,13 @@ DASHBOARD_HTML = """
 
 def create_dashboard(ctx: Any):
     """
-    Create a FastAPI dashboard app connected to a SmartContext instance.
+    Create a FastAPI dashboard app connected to a MemorySystem instance.
 
     Usage:
-        from smartcontext import SmartContext
-        from smartcontext.dashboard import create_dashboard
+        from memory_system import MemorySystem
+        from memory_system.dashboard import create_dashboard
 
-        ctx = SmartContext.from_yaml("bot.yaml")
+        ctx = MemorySystem.from_yaml("bot.yaml")
         app = create_dashboard(ctx)
 
         # Run with: uvicorn module:app
@@ -163,10 +163,10 @@ def create_dashboard(ctx: Any):
     except ImportError:
         raise ImportError(
             "Dashboard requires FastAPI. "
-            "Install with: pip install smartcontext[dashboard]"
+            "Install with: pip install memory_system[dashboard]"
         )
 
-    app = FastAPI(title="SmartContext Dashboard")
+    app = FastAPI(title="MemorySystem Dashboard")
 
     @app.get("/dashboard/", response_class=HTMLResponse)
     async def dashboard_page():

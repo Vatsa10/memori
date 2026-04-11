@@ -1,29 +1,29 @@
 from pathlib import Path
 from typing import Callable, Optional
 
-from smartcontext.core.models import (
+from memory_system.core.models import (
     BotConfig,
     ChatResponse,
     ConversationTurn,
     IntentPrediction,
     PipelineResult,
 )
-from smartcontext.core.intent_predictor import IntentPredictor
-from smartcontext.core.pipeline import Pipeline
-from smartcontext.core.context_assembler import MemorySearcher
-from smartcontext.config.loader import load_bot_config
-from smartcontext.providers.session import SessionStore
-from smartcontext.hooks import HookManager, EventType, Event
-from smartcontext.cache import IntentCache
-from smartcontext.analytics import AnalyticsCollector
+from memory_system.core.intent_predictor import IntentPredictor
+from memory_system.core.pipeline import Pipeline
+from memory_system.core.context_assembler import MemorySearcher
+from memory_system.config.loader import load_bot_config
+from memory_system.providers.session import SessionStore
+from memory_system.hooks import HookManager, EventType, Event
+from memory_system.cache import IntentCache
+from memory_system.analytics import AnalyticsCollector
 
 
-class SmartContext:
+class MemorySystem:
     """
     Main entry point for the intent-aware context management system.
 
     Usage:
-        ctx = SmartContext.from_yaml("my_bot.yaml")
+        ctx = MemorySystem.from_yaml("my_bot.yaml")
         result = await ctx.chat("Where is my order?", session_id="user123")
     """
 
@@ -60,12 +60,12 @@ class SmartContext:
         )
 
     @classmethod
-    def from_yaml(cls, path: str | Path, **kwargs) -> "SmartContext":
+    def from_yaml(cls, path: str | Path, **kwargs) -> "MemorySystem":
         config = load_bot_config(Path(path))
         return cls(config, **kwargs)
 
     @classmethod
-    def from_dict(cls, data: dict, **kwargs) -> "SmartContext":
+    def from_dict(cls, data: dict, **kwargs) -> "MemorySystem":
         config = BotConfig(**data)
         return cls(config, **kwargs)
 
@@ -137,7 +137,7 @@ class SmartContext:
         return response
 
     def chat_sync(self, message: str, session_id: str = "default") -> ChatResponse:
-        from smartcontext._sync import run_sync
+        from memory_system._sync import run_sync
         return run_sync(self.chat(message, session_id))
 
     async def predict_intent(self, message: str) -> IntentPrediction:

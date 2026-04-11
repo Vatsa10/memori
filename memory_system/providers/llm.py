@@ -1,7 +1,7 @@
 from litellm import acompletion
 import instructor
 
-from smartcontext.core.models import IntentPrediction
+from memory_system.core.models import IntentPrediction
 
 
 # Instructor client for structured output

@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "smartcontext"
-version = "0.2.0"
-description = "Intent-aware context management — send what's needed, skip what's not."
+name = "memory-system"
+version = "0.3.0"
+description = "Intent-aware memory + context management for AI agents. Remember, recall, respond."
 requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.7.0",
@@ -19,20 +19,22 @@ dependencies = [
 
 [project.optional-dependencies]
 embeddings = ["sentence-transformers>=3.0.0"]
+qdrant = ["qdrant-client>=1.9.0"]
+neo4j = ["neo4j>=5.0.0"]
+redis = ["redis>=5.0.0"]
 server = ["fastapi>=0.115.0", "uvicorn[standard]>=0.30.0"]
 dashboard = ["fastapi>=0.115.0", "uvicorn[standard]>=0.30.0", "jinja2>=3.1.0"]
-qdrant = ["qdrant-client>=1.9.0"]
 discovery = ["scikit-learn>=1.4.0", "sentence-transformers>=3.0.0"]
-all = ["smartcontext[embeddings,server,dashboard,qdrant,discovery]"]
+production = ["memory-system[embeddings,qdrant,neo4j,redis]"]
+all = ["memory-system[embeddings,server,dashboard,qdrant,neo4j,redis,discovery]"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23.0",
     "httpx>=0.27.0",
-    "smartcontext[all]",
 ]
 
 [tool.setuptools.packages.find]
-include = ["smartcontext*"]
+include = ["memory_system*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

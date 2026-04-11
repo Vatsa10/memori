@@ -1,4 +1,4 @@
-from smartcontext.core.models import ConversationTurn
+from memory_system.core.models import ConversationTurn
 
 
 class SessionStore:

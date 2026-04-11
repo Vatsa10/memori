@@ -1,4 +1,4 @@
-"""Optional server mode — run SmartContext as a standalone API."""
+"""Optional server mode — run MemorySystem as a standalone API."""
 
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -7,16 +7,16 @@ try:
     from fastapi import FastAPI, HTTPException
 except ImportError:
     raise ImportError(
-        "Server mode requires FastAPI. Install with: pip install smartcontext[server]"
+        "Server mode requires FastAPI. Install with: pip install memory_system[server]"
     )
 
-from smartcontext._client import SmartContext
-from smartcontext.core.models import ChatRequest, ChatResponse, BotConfig
-from smartcontext.config.loader import load_all_configs
-from smartcontext.config.registry import BotRegistry
+from memory_system._client import MemorySystem
+from memory_system.core.models import ChatRequest, ChatResponse, BotConfig
+from memory_system.config.loader import load_all_configs
+from memory_system.config.registry import BotRegistry
 
 
-_contexts: dict[str, SmartContext] = {}
+_contexts: dict[str, MemorySystem] = {}
 _registry = BotRegistry()
 
 
@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     _registry.load(configs_dir)
 
     for bot in _registry.list_bots():
-        _contexts[bot.bot_id] = SmartContext(bot)
+        _contexts[bot.bot_id] = MemorySystem(bot)
         print(f"  Loaded bot: {bot.bot_id} ({len(bot.intents)} intents)")
 
     print(f"Server ready with {len(_contexts)} bot(s)")
@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 
 def create_server(configs_dir: str = "configs") -> FastAPI:
     app = FastAPI(
-        title="SmartContext Server",
+        title="MemorySystem Server",
         description="Intent-aware context management API",
         version="0.2.0",
         lifespan=lifespan,
@@ -82,7 +82,7 @@ def create_server(configs_dir: str = "configs") -> FastAPI:
     return app
 
 
-# Entry point: python -m smartcontext.server.app
+# Entry point: python -m memory_system.server.app
 if __name__ == "__main__":
     import uvicorn
     app = create_server()

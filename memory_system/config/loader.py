@@ -1,7 +1,7 @@
 import yaml
 from pathlib import Path
 
-from smartcontext.core.models import BotConfig
+from memory_system.core.models import BotConfig
 
 
 def load_bot_config(file_path: Path) -> BotConfig:

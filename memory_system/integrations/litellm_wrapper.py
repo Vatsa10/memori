@@ -1,10 +1,10 @@
-"""Drop-in smartcontext-aware replacement for litellm.acompletion."""
+"""Drop-in memory_system-aware replacement for litellm.acompletion."""
 
 from pathlib import Path
 from typing import Any
 
 
-async def smartcontext_completion(
+async def memory_system_completion(
     model: str,
     messages: list[dict],
     bot_config: Any,
@@ -15,24 +15,24 @@ async def smartcontext_completion(
     Drop-in replacement for litellm.acompletion with intent-aware context.
 
     Usage:
-        from smartcontext.integrations.litellm_wrapper import smartcontext_completion
+        from memory_system.integrations.litellm_wrapper import memory_system_completion
 
-        response = await smartcontext_completion(
+        response = await memory_system_completion(
             model="groq/llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": "Where is my order?"}],
             bot_config="my_bot.yaml",
         )
     """
-    from smartcontext._client import SmartContext
-    from smartcontext.core.models import BotConfig
+    from memory_system._client import MemorySystem
+    from memory_system.core.models import BotConfig
 
     # Resolve bot config
     if isinstance(bot_config, (str, Path)):
-        ctx = SmartContext.from_yaml(bot_config)
+        ctx = MemorySystem.from_yaml(bot_config)
     elif isinstance(bot_config, BotConfig):
-        ctx = SmartContext(bot_config)
+        ctx = MemorySystem(bot_config)
     elif isinstance(bot_config, dict):
-        ctx = SmartContext.from_dict(bot_config)
+        ctx = MemorySystem.from_dict(bot_config)
     else:
         raise TypeError(f"bot_config must be a path, BotConfig, or dict, got {type(bot_config)}")
 

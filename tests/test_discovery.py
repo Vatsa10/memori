@@ -35,7 +35,7 @@ SAMPLE_MESSAGES = [
 @skip_no_sklearn
 class TestIntentDiscovery:
     def test_discover_basic(self):
-        from smartcontext.discovery.auto_intent import IntentDiscovery
+        from memory_system.discovery.auto_intent import IntentDiscovery
 
         discovery = IntentDiscovery()
         result = discovery.discover(SAMPLE_MESSAGES, n_clusters=3)
@@ -45,7 +45,7 @@ class TestIntentDiscovery:
         assert result.silhouette_score > 0
 
     def test_discover_auto_k(self):
-        from smartcontext.discovery.auto_intent import IntentDiscovery
+        from memory_system.discovery.auto_intent import IntentDiscovery
 
         discovery = IntentDiscovery()
         result = discovery.discover(SAMPLE_MESSAGES)
@@ -57,7 +57,7 @@ class TestIntentDiscovery:
             assert intent.cluster_size >= 1
 
     def test_to_yaml(self):
-        from smartcontext.discovery.auto_intent import IntentDiscovery
+        from memory_system.discovery.auto_intent import IntentDiscovery
 
         discovery = IntentDiscovery()
         result = discovery.discover(SAMPLE_MESSAGES, n_clusters=3)
@@ -68,7 +68,7 @@ class TestIntentDiscovery:
         assert "intents:" in yaml_str
 
     def test_too_few_messages(self):
-        from smartcontext.discovery.auto_intent import IntentDiscovery
+        from memory_system.discovery.auto_intent import IntentDiscovery
 
         discovery = IntentDiscovery()
         result = discovery.discover(["hello", "hi"])
@@ -77,7 +77,7 @@ class TestIntentDiscovery:
         assert len(result.unclustered_messages) == 2
 
     def test_discovered_intents_have_samples(self):
-        from smartcontext.discovery.auto_intent import IntentDiscovery
+        from memory_system.discovery.auto_intent import IntentDiscovery
 
         discovery = IntentDiscovery()
         result = discovery.discover(SAMPLE_MESSAGES, n_clusters=3)

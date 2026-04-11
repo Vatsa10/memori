@@ -1,6 +1,6 @@
 from typing import Optional, Protocol, runtime_checkable
 
-from smartcontext.core.models import (
+from memory_system.core.models import (
     AssembledContext,
     BotConfig,
     ConversationTurn,

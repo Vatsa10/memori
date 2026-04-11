@@ -1,7 +1,7 @@
 from hashlib import md5
 from typing import Optional
 
-from smartcontext.core.models import IntentPrediction
+from memory_system.core.models import IntentPrediction
 
 
 class IntentCache:

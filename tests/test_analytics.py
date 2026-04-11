@@ -1,6 +1,6 @@
 import pytest
-from smartcontext.analytics import AnalyticsCollector
-from smartcontext.core.models import ChatResponse, IntentPrediction, PredictionMethod
+from memory_system.analytics import AnalyticsCollector
+from memory_system.core.models import ChatResponse, IntentPrediction, PredictionMethod
 
 
 def _make_response(intent_name="check_order", method=PredictionMethod.KEYWORD, reduction=70.0):

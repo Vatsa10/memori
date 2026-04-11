@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from smartcontext import SmartContext, ChatResponse, EventType, Event
-from smartcontext.core.models import IntentPrediction, PredictionMethod
+from memory_system import MemorySystem, ChatResponse, EventType, Event
+from memory_system.core.models import IntentPrediction, PredictionMethod
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def mock_intent_llm():
 
 @pytest.fixture
 def ctx(sample_bot_config, mock_llm, mock_intent_llm):
-    return SmartContext(
+    return MemorySystem(
         config=sample_bot_config,
         llm_fn=mock_llm,
         intent_llm_fn=mock_intent_llm,
@@ -32,7 +32,7 @@ def ctx(sample_bot_config, mock_llm, mock_intent_llm):
     )
 
 
-class TestSmartContext:
+class TestMemorySystem:
     @pytest.mark.asyncio
     async def test_chat_returns_response(self, ctx):
         result = await ctx.chat("Where is my order?")
@@ -131,7 +131,7 @@ class TestSmartContext:
         assert "total_ms" in result.latency_ms
 
 
-class TestSmartContextFactory:
+class TestMemorySystemFactory:
     def test_from_yaml(self, tmp_path):
         config_path = tmp_path / "test.yaml"
         config_path.write_text("""
@@ -144,7 +144,7 @@ intents:
     keywords: ["hello", "hi"]
     instructions: "Say hello back"
 """)
-        ctx = SmartContext.from_yaml(
+        ctx = MemorySystem.from_yaml(
             config_path,
             llm_fn=AsyncMock(return_value="hi"),
             enable_embeddings=False,
@@ -152,7 +152,7 @@ intents:
         assert ctx.config.bot_id == "yaml_test"
 
     def test_from_dict(self):
-        ctx = SmartContext.from_dict(
+        ctx = MemorySystem.from_dict(
             {
                 "bot_id": "dict_test",
                 "bot_name": "DictBot",

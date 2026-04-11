@@ -1,6 +1,6 @@
 import pytest
-from smartcontext.core.models import AssembledContext, ConversationTurn, BotConfig, IntentDefinition
-from smartcontext.core.prompt_builder import (
+from memory_system.core.models import AssembledContext, ConversationTurn, BotConfig, IntentDefinition
+from memory_system.core.prompt_builder import (
     build_smart_prompt,
     build_full_prompt_estimate,
     smart_prompt_to_messages,

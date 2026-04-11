@@ -1,17 +1,17 @@
-"""LangChain integration — use SmartContext as a step in LangChain chains."""
+"""LangChain integration — use MemorySystem as a step in LangChain chains."""
 
 from typing import Any, Optional
 
 
 class LangChainMiddleware:
     """
-    Wraps SmartContext as a LangChain-compatible runnable.
+    Wraps MemorySystem as a LangChain-compatible runnable.
 
     Usage:
-        from smartcontext import SmartContext
-        from smartcontext.integrations.langchain import LangChainMiddleware
+        from memory_system import MemorySystem
+        from memory_system.integrations.langchain import LangChainMiddleware
 
-        ctx = SmartContext.from_yaml("bot.yaml")
+        ctx = MemorySystem.from_yaml("bot.yaml")
         middleware = LangChainMiddleware(ctx)
         result = await middleware.ainvoke("Where is my order?")
     """

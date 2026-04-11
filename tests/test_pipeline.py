@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from smartcontext.core.pipeline import Pipeline
-from smartcontext.core.intent_predictor import IntentPredictor
-from smartcontext.core.models import IntentPrediction, PredictionMethod
-from smartcontext.providers.memory import InMemoryProvider
+from memory_system.core.pipeline import Pipeline
+from memory_system.core.intent_predictor import IntentPredictor
+from memory_system.core.models import IntentPrediction, PredictionMethod
+from memory_system.providers.memory import InMemoryProvider
 
 
 def _make_pipeline(llm_mock: AsyncMock, intent_llm_mock: AsyncMock | None = None):

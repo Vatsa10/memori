@@ -76,6 +76,8 @@ class ChatResponse(BaseModel):
     full_prompt_estimate: int = 0
     reduction_percent: float = 0.0
     latency_ms: dict[str, float] = {}
+    memories_recalled: int = 0
+    memories_stored: int = 0
 
 
 class PipelineResult(BaseModel):
@@ -83,3 +85,5 @@ class PipelineResult(BaseModel):
     smart_prompt: SmartPrompt
     response: str
     latency_ms: dict[str, float] = {}
+    memories_recalled: int = 0
+    memories_stored: int = 0

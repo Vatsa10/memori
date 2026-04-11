@@ -1,6 +1,6 @@
 import pytest
-from smartcontext.cache import IntentCache
-from smartcontext.core.models import IntentPrediction, PredictionMethod
+from memory_system.cache import IntentCache
+from memory_system.core.models import IntentPrediction, PredictionMethod
 
 
 @pytest.fixture

@@ -52,7 +52,7 @@ class IntentDiscovery:
         except ImportError:
             raise ImportError(
                 "Auto-intent discovery requires scikit-learn. "
-                "Install with: pip install smartcontext[discovery]"
+                "Install with: pip install memory_system[discovery]"
             )
 
         if len(messages) < 6:
@@ -133,7 +133,7 @@ class IntentDiscovery:
         if not llm_fn or not result.intents:
             return result
 
-        from smartcontext.providers.llm import call_llm
+        from memory_system.providers.llm import call_llm
         _llm_fn = llm_fn or call_llm
 
         polished_intents = []

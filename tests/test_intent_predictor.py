@@ -1,6 +1,6 @@
 import pytest
-from smartcontext.core.intent_predictor import IntentPredictor
-from smartcontext.core.models import PredictionMethod
+from memory_system.core.intent_predictor import IntentPredictor
+from memory_system.core.models import PredictionMethod
 
 
 @pytest.fixture
