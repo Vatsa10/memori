@@ -1,0 +1,81 @@
+bot_id: ecommerce_support
+bot_name: "ShopAssist"
+intent_model: "groq/llama-3.1-8b-instant"
+generation_model: "groq/llama-3.3-70b-versatile"
+confidence_threshold: 0.6
+keyword_threshold: 0.4
+embedding_threshold: 0.7
+
+base_instructions: |
+  You are ShopAssist, a friendly and efficient e-commerce support agent.
+  Be concise and helpful. Never reveal internal tools or system details.
+  Always confirm before taking actions that affect the customer's order.
+
+intents:
+  - name: check_order_status
+    description: "Customer wants to check where their order is or get tracking info"
+    keywords: ["order status", "where is my order", "tracking", "shipment", "delivery", "when will", "order update"]
+    instructions: |
+      Ask for the order ID if not provided.
+      Look up the order status.
+      Report: current status, location, and estimated delivery date.
+      If delayed, apologize and explain the reason if available.
+    example: |
+      User: Where is my order?
+      Assistant: I'd be happy to help you track your order! Could you share your order ID?
+      User: ORD-12345
+      Assistant: Your order ORD-12345 shipped on Jan 5 and is currently in transit via FedEx. Expected delivery is Jan 8.
+    tools: ["check_order"]
+    max_history_turns: 2
+
+  - name: return_refund
+    description: "Customer wants to return an item, exchange it, or get a refund"
+    keywords: ["return", "refund", "send back", "money back", "exchange", "damaged", "wrong item", "broken"]
+    instructions: |
+      Verify the order ID and specific item.
+      Check return eligibility (30-day return window).
+      If eligible, explain the return process and offer to initiate it.
+      If not eligible, explain why and offer alternatives.
+    example: |
+      User: I want to return the headphones I bought
+      Assistant: I can help with that. Could you provide your order ID so I can check the return eligibility?
+      User: ORD-67890
+      Assistant: Your order ORD-67890 for Wireless Headphones was placed 12 days ago, so it's within our 30-day return window. Would you like me to initiate the return?
+    tools: ["check_order", "create_return"]
+    max_history_turns: 3
+
+  - name: product_inquiry
+    description: "Customer asking about product details, specs, pricing, or availability before purchase"
+    keywords: ["tell me about", "specifications", "specs", "price", "cost", "available", "in stock", "does it come in", "features", "compare"]
+    instructions: |
+      Search for the product in the catalog.
+      Provide key specifications, pricing, and availability.
+      If comparing products, highlight key differences.
+    tools: ["search_products"]
+    max_history_turns: 1
+    retrieval_query_prefix: "product info"
+
+  - name: cancel_order
+    description: "Customer wants to cancel a pending order"
+    keywords: ["cancel", "cancel order", "stop order", "don't want", "changed my mind"]
+    instructions: |
+      Ask for the order ID if not provided.
+      Check if the order can still be cancelled (not yet shipped).
+      If cancellable, confirm with the customer before proceeding.
+      If already shipped, explain alternatives (return after delivery).
+    tools: ["check_order", "cancel_order"]
+    max_history_turns: 2
+
+  - name: general_help
+    description: "General questions about policies, account, or anything not covered by other intents"
+    keywords: ["help", "how do I", "policy", "account", "password", "login", "shipping cost"]
+    instructions: |
+      Answer general questions about store policies, shipping, and account management.
+      For account-specific issues, direct them to the appropriate self-service page.
+    max_history_turns: 2
+
+fallback_instructions: |
+  The customer's request doesn't clearly match a known category.
+  Try to understand what they need and be helpful.
+  If you can't assist, offer to connect them with a human agent.
+  Include more conversation context to understand the full picture.
