@@ -1,4 +1,4 @@
-from app.core.models import AssembledContext, BotConfig, ConversationTurn, SmartPrompt
+from smartcontext.core.models import AssembledContext, BotConfig, ConversationTurn, SmartPrompt
 
 
 def estimate_tokens(text: str) -> int:

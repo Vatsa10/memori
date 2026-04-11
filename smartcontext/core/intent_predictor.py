@@ -3,7 +3,7 @@ import time
 import numpy as np
 from typing import Optional
 
-from app.core.models import (
+from smartcontext.core.models import (
     BotConfig,
     ConversationTurn,
     IntentDefinition,

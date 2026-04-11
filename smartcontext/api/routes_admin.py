@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
-from app.bot_config.registry import registry
-from app.core.models import BotConfig
+from smartcontext.config.registry import registry
+from smartcontext.core.models import BotConfig
 
 router = APIRouter(prefix="/api", tags=["admin"])
 

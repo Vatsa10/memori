@@ -1,13 +1,13 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
-from app.config import settings
-from app.bot_config.registry import registry
-from app.core.intent_predictor import IntentPredictor
-from app.core.pipeline import Pipeline
-from app.providers.memory import InMemoryProvider
-from app.api.routes_chat import router as chat_router, set_pipeline
-from app.api.routes_admin import router as admin_router
+from smartcontext.config import settings
+from smartcontext.config.registry import registry
+from smartcontext.core.intent_predictor import IntentPredictor
+from smartcontext.core.pipeline import Pipeline
+from smartcontext.providers.memory import InMemoryProvider
+from smartcontext.api.routes_chat import router as chat_router, set_pipeline
+from smartcontext.api.routes_admin import router as admin_router
 
 
 @asynccontextmanager

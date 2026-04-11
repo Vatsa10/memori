@@ -1,5 +1,5 @@
 import pytest
-from app.core.models import BotConfig, IntentDefinition, ConversationTurn
+from smartcontext.core.models import BotConfig, IntentDefinition, ConversationTurn
 
 
 @pytest.fixture

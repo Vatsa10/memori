@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from app.core.pipeline import Pipeline
-from app.core.intent_predictor import IntentPredictor
-from app.core.models import IntentPrediction, PredictionMethod
-from app.providers.memory import InMemoryProvider
+from smartcontext.core.pipeline import Pipeline
+from smartcontext.core.intent_predictor import IntentPredictor
+from smartcontext.core.models import IntentPrediction, PredictionMethod
+from smartcontext.providers.memory import InMemoryProvider
 
 
 @pytest.fixture
@@ -18,8 +18,8 @@ def pipeline():
 def _mock_llm_calls():
     """Mock both LLM calls: generation and intent prediction fallback."""
     return (
-        patch("app.core.pipeline.call_llm", new_callable=AsyncMock),
-        patch("app.core.pipeline.predict_intent_llm", new_callable=AsyncMock),
+        patch("smartcontext.core.pipeline.call_llm", new_callable=AsyncMock),
+        patch("smartcontext.core.pipeline.predict_intent_llm", new_callable=AsyncMock),
     )
 
 

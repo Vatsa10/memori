@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException
 
-from app.core.models import ChatRequest, ChatResponse, ConversationTurn
-from app.core.pipeline import Pipeline
-from app.core.intent_predictor import IntentPredictor
-from app.bot_config.registry import registry
-from app.utils.session import session_store
-from app.providers.memory import InMemoryProvider
+from smartcontext.core.models import ChatRequest, ChatResponse, ConversationTurn
+from smartcontext.core.pipeline import Pipeline
+from smartcontext.core.intent_predictor import IntentPredictor
+from smartcontext.config.registry import registry
+from smartcontext.providers.session import session_store
+from smartcontext.providers.memory import InMemoryProvider
 
 router = APIRouter(prefix="/api", tags=["chat"])
 

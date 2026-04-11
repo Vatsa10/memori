@@ -1,21 +1,21 @@
 import time
+from typing import Callable, Optional
 
-from app.core.models import (
+from smartcontext.core.models import (
     BotConfig,
     ConversationTurn,
     IntentPrediction,
     PipelineResult,
-    SmartPrompt,
 )
-from app.core.intent_predictor import IntentPredictor
-from app.core.context_assembler import ContextAssembler, MemorySearcher
-from app.core.prompt_builder import (
+from smartcontext.core.intent_predictor import IntentPredictor
+from smartcontext.core.context_assembler import ContextAssembler, MemorySearcher
+from smartcontext.core.prompt_builder import (
     build_smart_prompt,
     build_full_prompt_estimate,
     smart_prompt_to_messages,
 )
-from app.providers.llm import call_llm, predict_intent_llm
-from typing import Optional
+from smartcontext.providers.llm import call_llm as default_call_llm
+from smartcontext.providers.llm import predict_intent_llm as default_predict_intent_llm
 
 
 class Pipeline:
@@ -23,26 +23,35 @@ class Pipeline:
         self,
         intent_predictor: IntentPredictor,
         memory_provider: Optional[MemorySearcher] = None,
+        llm_fn: Optional[Callable] = None,
+        intent_llm_fn: Optional[Callable] = None,
     ):
         self.intent_predictor = intent_predictor
         self.context_assembler = ContextAssembler(memory_provider)
+        self._llm_fn = llm_fn or default_call_llm
+        self._intent_llm_fn = intent_llm_fn or default_predict_intent_llm
 
     async def run(
         self,
         bot_config: BotConfig,
         user_message: str,
         conversation_history: list[ConversationTurn],
+        cached_intent: Optional[IntentPrediction] = None,
     ) -> PipelineResult:
         latency = {}
 
-        # Stage 1: Predict intent
-        prediction, intent_ms = await self.intent_predictor.predict(
-            bot_config=bot_config,
-            user_message=user_message,
-            recent_history=conversation_history[-3:],
-            llm_predict_fn=predict_intent_llm,
-        )
-        latency["intent_prediction_ms"] = round(intent_ms, 2)
+        # Stage 1: Predict intent (or use cached)
+        if cached_intent:
+            prediction = cached_intent
+            latency["intent_prediction_ms"] = 0.0
+        else:
+            prediction, intent_ms = await self.intent_predictor.predict(
+                bot_config=bot_config,
+                user_message=user_message,
+                recent_history=conversation_history[-3:],
+                llm_predict_fn=self._intent_llm_fn,
+            )
+            latency["intent_prediction_ms"] = round(intent_ms, 2)
 
         # Stage 2: Assemble context
         t0 = time.perf_counter()
@@ -65,10 +74,9 @@ class Pipeline:
         # Stage 4: Call LLM with minimal prompt
         t0 = time.perf_counter()
         messages = smart_prompt_to_messages(smart_prompt)
-        # Add current user message
         messages.append({"role": "user", "content": user_message})
 
-        response = await call_llm(
+        response = await self._llm_fn(
             model=bot_config.generation_model,
             messages=messages,
             tools=smart_prompt.tools if smart_prompt.tools else None,
