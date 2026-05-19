@@ -22,11 +22,15 @@ _registry = BotRegistry()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    configs_dir = Path(app.state.configs_dir) if hasattr(app.state, "configs_dir") else Path("configs")
+    configs_dir = (
+        Path(app.state.configs_dir)
+        if hasattr(app.state, "configs_dir")
+        else Path("configs")
+    )
     _registry.load(configs_dir)
 
     for bot in _registry.list_bots():
-        _contexts[bot.bot_id] = MemorySystem(bot)
+        _contexts[bot.bot_id] = MemorySystem.from_config(bot)
         print(f"  Loaded bot: {bot.bot_id} ({len(bot.intents)} intents)")
 
     print(f"Server ready with {len(_contexts)} bot(s)")
@@ -47,7 +51,9 @@ def create_server(configs_dir: str = "configs") -> FastAPI:
     async def chat(request: ChatRequest):
         ctx = _contexts.get(request.bot_id)
         if not ctx:
-            raise HTTPException(status_code=404, detail=f"Bot '{request.bot_id}' not found")
+            raise HTTPException(
+                status_code=404, detail=f"Bot '{request.bot_id}' not found"
+            )
         return await ctx.chat(request.message, session_id=request.session_id)
 
     @app.get("/api/bots")
@@ -85,5 +91,6 @@ def create_server(configs_dir: str = "configs") -> FastAPI:
 # Entry point: python -m memory_system.server.app
 if __name__ == "__main__":
     import uvicorn
+
     app = create_server()
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -18,10 +18,13 @@ from memory_system.core.memory_models import (
 from memory_system.hooks import HookManager, EventType, Event
 from memory_system.analytics import AnalyticsCollector
 
+StandaloneMemory = Memory  # For clarity; matches README
+
 __all__ = [
     # Main entry points
-    "MemorySystem",     # Grounded chat system (knowledge + memory + LLM)
-    "Memory",           # Standalone memory API (plug into any agent)
+    "MemorySystem",  # Grounded chat system (knowledge + memory + LLM)
+    "Memory",  # Standalone memory API (plug into any agent)
+    "StandaloneMemory",  # Alias for Memory (for clarity; matches README)
     # Response
     "ChatResponse",
     "ConversationTurn",

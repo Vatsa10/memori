@@ -30,14 +30,19 @@ async def memory_system_completion(
     if isinstance(bot_config, (str, Path)):
         ctx = MemorySystem.from_yaml(bot_config)
     elif isinstance(bot_config, BotConfig):
-        ctx = MemorySystem(bot_config)
+        ctx = MemorySystem.from_config(bot_config)
     elif isinstance(bot_config, dict):
-        ctx = MemorySystem.from_dict(bot_config)
+        ctx = MemorySystem.from_config(BotConfig(**bot_config))
     else:
-        raise TypeError(f"bot_config must be a path, BotConfig, or dict, got {type(bot_config)}")
+        raise TypeError(
+            f"bot_config must be a path, BotConfig, or dict, got {type(bot_config)}"
+        )
 
     # Override generation model if specified
-    ctx.config.generation_model = model
+    if ctx.bot_config:
+        ctx.bot_config.generation_model = model
+    else:
+        raise ValueError("bot_config must be provided to use memory_system_completion")
 
     # Extract last user message
     user_msg = ""

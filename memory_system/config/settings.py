@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     # Embedding
     embedding_model: str = "all-MiniLM-L6-v2"
 
+    # Provider Preferences
+    memory_store: str = "inmemory"  # "inmemory", "qdrant"
+    graph_store: str = "inmemory"  # "inmemory", "neo4j"
+    session_store: str = "inmemory"  # "inmemory", "redis"
+    cache: str = "none"  # "none", "redis"
+
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
