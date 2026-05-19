@@ -108,6 +108,11 @@ class MemorySystem:
         smart_ops_k: int = 5,
         smart_ops_model: Optional[str] = None,
         smart_ops_prompt: Optional[str] = None,
+        # Hybrid retrieval + rerank
+        retriever: Optional[Any] = None,
+        reranker: Optional[Any] = None,
+        hybrid_top_n: int = 20,
+        rerank_top_k: int = 5,
         # Analytics
         enable_analytics: bool = True,
     ):
@@ -142,6 +147,22 @@ class MemorySystem:
             smart_ops_model=smart_ops_model,
             smart_ops_prompt=smart_ops_prompt,
         )
+
+        # Hybrid retrieval + rerank
+        self._retriever = retriever
+        self._reranker = reranker
+        self._hybrid_top_n = hybrid_top_n
+        self._rerank_top_k = rerank_top_k
+
+        # If retriever has a BM25 cache, wire memory-mutation events to bump it
+        bm25 = getattr(retriever, "bm25", None) if retriever is not None else None
+        if bm25 is not None and hasattr(bm25, "bump"):
+            async def _bump(event):
+                uid = event.data.get("user_id") if hasattr(event, "data") else None
+                if uid:
+                    bm25.bump(uid)
+
+            self._hooks.on(EventType.MEMORIES_STORED, _bump)
 
         # Initialize intent-aware pipeline if BotConfig provided
         if bot_config:
@@ -428,14 +449,38 @@ class MemorySystem:
         profile = UserProfile(user_id=effective_user_id)
         if self._memory.store:
             t0 = time.perf_counter()
-            memory_results = await self._memory.recall(
-                query=message,
-                user_id=effective_user_id,
-                k=self._memory_top_k,
-            )
+            if self._retriever is not None:
+                memory_results = await self._retriever.search(
+                    query=message,
+                    user_id=effective_user_id,
+                    k=self._hybrid_top_n,
+                )
+                latency["hybrid_retrieval_ms"] = round(
+                    (time.perf_counter() - t0) * 1000, 2
+                )
+            else:
+                memory_results = await self._memory.recall(
+                    query=message,
+                    user_id=effective_user_id,
+                    k=self._memory_top_k,
+                )
+                latency["memory_recall_ms"] = round(
+                    (time.perf_counter() - t0) * 1000, 2
+                )
+
+            if self._reranker is not None and memory_results:
+                t0 = time.perf_counter()
+                memory_results = await self._reranker.rerank(
+                    message, memory_results, top_k=self._rerank_top_k
+                )
+                latency["rerank_ms"] = round(
+                    (time.perf_counter() - t0) * 1000, 2
+                )
+            elif self._retriever is not None:
+                memory_results = memory_results[: self._memory_top_k]
+
             memories_recalled = len(memory_results)
             profile = await self._memory.get_user_profile(effective_user_id)
-            latency["memory_recall_ms"] = round((time.perf_counter() - t0) * 1000, 2)
 
         # 3. Build grounded prompt (token-budget aware)
         t0 = time.perf_counter()
@@ -504,7 +549,7 @@ class MemorySystem:
             await self._hooks.emit(
                 Event(
                     type=EventType.MEMORIES_STORED,
-                    data={"count": memories_stored},
+                    data={"count": memories_stored, "user_id": effective_user_id},
                 )
             )
 
