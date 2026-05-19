@@ -108,3 +108,23 @@ class ConversationSummary(BaseModel):
     summary: str
     key_facts: list[str] = []
     turn_count: int = 0
+
+
+class SummaryLevel(str, Enum):
+    TURN = "turn"
+    SESSION = "session"
+    DAY = "day"
+    MONTH = "month"
+
+
+class SummaryNode(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    user_id: str
+    level: SummaryLevel
+    content: str
+    key_facts: list[str] = []
+    child_ids: list[str] = []
+    time_range_start: datetime
+    time_range_end: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: dict[str, Any] = {}

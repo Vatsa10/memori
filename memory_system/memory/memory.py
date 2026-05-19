@@ -208,6 +208,7 @@ class Memory:
         k: int = 5,
         context: Optional[str] = None,
         graph_max_hops: int = 1,
+        include_summaries: bool = False,
     ) -> list[MemorySearchResult]:
         """Search memories with optional context augmentation.
 
@@ -249,6 +250,13 @@ class Memory:
                             user_id=user_id, source="graph",
                         )
                         results.append(MemorySearchResult(memory=graph_mem, score=0.7, source="graph"))
+
+        # Drop summary-tree nodes unless explicitly requested
+        if not include_summaries:
+            results = [
+                r for r in results
+                if not r.memory.metadata.get("summary_level")
+            ]
 
         # Deduplicate
         seen = set()

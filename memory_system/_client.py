@@ -113,6 +113,9 @@ class MemorySystem:
         reranker: Optional[Any] = None,
         hybrid_top_n: int = 20,
         rerank_top_k: int = 5,
+        # Hierarchical summary tree
+        enable_summary_tree: bool = False,
+        summary_tree: Optional[Any] = None,
         # Analytics
         enable_analytics: bool = True,
     ):
@@ -163,6 +166,20 @@ class MemorySystem:
                     bm25.bump(uid)
 
             self._hooks.on(EventType.MEMORIES_STORED, _bump)
+
+        # Hierarchical summary tree (opt-in)
+        if summary_tree is not None:
+            self._summary_tree = summary_tree
+        elif enable_summary_tree and memory_store is not None:
+            from memory_system.memory.summary_tree import SummaryTreeManager
+
+            self._summary_tree = SummaryTreeManager(
+                memory_store=memory_store,
+                llm_fn=extraction_llm_fn or llm_fn,
+                model=extraction_model,
+            )
+        else:
+            self._summary_tree = None
 
         # Initialize intent-aware pipeline if BotConfig provided
         if bot_config:
@@ -311,6 +328,19 @@ class MemorySystem:
             await self.add_knowledge(text, source=source)
             count += 1
         return count
+
+    async def search_hierarchical(
+        self,
+        query: str,
+        user_id: str,
+        k: int = 5,
+    ) -> list[MemorySearchResult]:
+        """Coarse-to-fine retrieval across the summary tree (if enabled)."""
+        if self._summary_tree is None:
+            return []
+        return await self._summary_tree.search_hierarchical(
+            query=query, user_id=user_id, k=k
+        )
 
     async def search_knowledge(
         self, query: str, k: Optional[int] = None
@@ -714,6 +744,27 @@ class MemorySystem:
             )
             memories_stored = len(extraction.memories)
             latency["memory_store_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+
+            # Fire-and-forget turn summary (doesn't block response)
+            if self._summary_tree is not None:
+                import asyncio
+                turn_id = next(
+                    (m.turn_id for m in extraction.memories if m.turn_id), None
+                )
+
+                async def _summary_task():
+                    try:
+                        await self._summary_tree.summarize_turn(
+                            user_msg=message,
+                            assistant_msg=response,
+                            user_id=effective_user_id,
+                            turn_id=turn_id or "",
+                            session_id=session_id,
+                        )
+                    except Exception:
+                        pass
+
+                asyncio.create_task(_summary_task())
 
         latency["total_ms"] = round(sum(latency.values()), 2)
 
