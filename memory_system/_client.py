@@ -324,6 +324,207 @@ class MemorySystem:
             k=k or self._knowledge_top_k,
         )
 
+    # --- Document Ingestion (PDF / URL / Image / Audio) ---
+
+    async def ingest_document(
+        self,
+        path_or_url,
+        *,
+        target: str = "knowledge",  # "knowledge" | "memory"
+        user_id: Optional[str] = None,
+        chunker=None,
+        metadata: Optional[dict] = None,
+        stream: bool = False,
+    ):
+        """Ingest a document into the knowledge_store or per-user memory_store.
+
+        Dispatches by source type (PDF/URL/image/audio/text). Each chunk becomes
+        a Memory record. Returns either a list[Memory] (default) or an async
+        iterator yielding Memory as each chunk persists (when stream=True).
+        """
+        from memory_system.ingestion import (
+            detect_source_type,
+        )
+        from memory_system.ingestion.chunker import SemanticChunker
+
+        if target == "memory" and not user_id:
+            raise ValueError("user_id is required when target='memory'")
+        if target == "knowledge" and not self._knowledge_store:
+            raise RuntimeError("No knowledge_store provided.")
+        if target == "memory" and not self._memory.store:
+            raise RuntimeError("No memory_store provided.")
+
+        active_chunker = chunker or SemanticChunker()
+        kind = detect_source_type(path_or_url)
+
+        if kind == "pdf":
+            from memory_system.ingestion.pdf import ingest_pdf
+            chunks = await ingest_pdf(path_or_url, chunker=active_chunker)
+        elif kind == "url":
+            from memory_system.ingestion.url import ingest_url
+            chunks = await ingest_url(path_or_url, chunker=active_chunker)
+        elif kind == "image":
+            from memory_system.ingestion.image import ingest_image
+            llm = self._llm_fn
+            if llm is None:
+                raise RuntimeError(
+                    "Image ingestion requires llm_fn on MemorySystem (vision-capable)."
+                )
+            chunks = await ingest_image(path_or_url, llm_fn=llm)
+        elif kind == "audio":
+            from memory_system.ingestion.audio import ingest_audio
+            chunks = await ingest_audio(path_or_url, chunker=active_chunker)
+        else:  # plain text
+            from memory_system.ingestion.chunker import Chunk
+            text = path_or_url if isinstance(path_or_url, str) else path_or_url.decode(
+                "utf-8", errors="ignore"
+            )
+            chunks = active_chunker.chunk(
+                text, base_metadata={"source": "text"}
+            )
+
+        if stream:
+            return self._ingest_chunks_stream(
+                chunks, target=target, user_id=user_id, metadata=metadata
+            )
+        return await self._ingest_chunks_collect(
+            chunks, target=target, user_id=user_id, metadata=metadata
+        )
+
+    async def _persist_chunk(
+        self,
+        chunk,
+        *,
+        target: str,
+        user_id: Optional[str],
+        metadata: Optional[dict],
+    ) -> MemoryModel:
+        merged_meta = {**chunk.metadata, **(metadata or {}), "chunk_index": chunk.index}
+        if target == "knowledge":
+            mem = MemoryModel(
+                text=chunk.text,
+                user_id=KNOWLEDGE_USER_ID,
+                memory_type=MemoryType.PROCEDURAL,
+                metadata=merged_meta,
+                source=chunk.metadata.get("source", "manual"),
+                importance=0.7,
+            )
+            await self._knowledge_store.add(mem)
+            return mem
+        # target == "memory"
+        mem = MemoryModel(
+            text=chunk.text,
+            user_id=user_id,
+            memory_type=MemoryType.SEMANTIC,
+            metadata=merged_meta,
+            source=chunk.metadata.get("source", "manual"),
+            importance=0.6,
+        )
+        await self._memory.store.add(mem)
+        return mem
+
+    async def _ingest_chunks_collect(
+        self,
+        chunks,
+        *,
+        target: str,
+        user_id: Optional[str],
+        metadata: Optional[dict],
+    ) -> list[MemoryModel]:
+        results: list[MemoryModel] = []
+        for chunk in chunks:
+            results.append(
+                await self._persist_chunk(
+                    chunk, target=target, user_id=user_id, metadata=metadata
+                )
+            )
+        return results
+
+    async def _ingest_chunks_stream(
+        self,
+        chunks,
+        *,
+        target: str,
+        user_id: Optional[str],
+        metadata: Optional[dict],
+    ):
+        for chunk in chunks:
+            yield await self._persist_chunk(
+                chunk, target=target, user_id=user_id, metadata=metadata
+            )
+
+    async def ingest_stream(
+        self,
+        chunks,
+        *,
+        target: str = "knowledge",
+        user_id: Optional[str] = None,
+        batch_size: int = 10,
+        metadata: Optional[dict] = None,
+    ):
+        """Persist an (async)iterable of Chunks; yield each stored Memory.
+
+        Concurrent within each batch via asyncio.gather; results yielded in
+        completion order.
+        """
+        import asyncio
+        import inspect
+
+        if target == "memory" and not user_id:
+            raise ValueError("user_id is required when target='memory'")
+        if target == "knowledge" and not self._knowledge_store:
+            raise RuntimeError("No knowledge_store provided.")
+        if target == "memory" and not self._memory.store:
+            raise RuntimeError("No memory_store provided.")
+
+        is_async_iter = hasattr(chunks, "__aiter__")
+        if is_async_iter:
+            iterator = chunks.__aiter__()
+
+            async def next_chunk():
+                try:
+                    return await iterator.__anext__()
+                except StopAsyncIteration:
+                    return None
+        else:
+            iterator = iter(chunks)
+
+            async def next_chunk():
+                try:
+                    return next(iterator)
+                except StopIteration:
+                    return None
+
+        batch: list = []
+        while True:
+            item = await next_chunk()
+            if item is None:
+                break
+            batch.append(item)
+            if len(batch) >= batch_size:
+                results = await asyncio.gather(
+                    *[
+                        self._persist_chunk(
+                            c, target=target, user_id=user_id, metadata=metadata
+                        )
+                        for c in batch
+                    ]
+                )
+                for r in results:
+                    yield r
+                batch = []
+        if batch:
+            results = await asyncio.gather(
+                *[
+                    self._persist_chunk(
+                        c, target=target, user_id=user_id, metadata=metadata
+                    )
+                    for c in batch
+                ]
+            )
+            for r in results:
+                yield r
+
     # --- Chat ---
 
     async def chat(
