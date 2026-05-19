@@ -6,6 +6,69 @@ from typing import Optional
 from memory_system.core.memory_models import Memory, MemorySearchResult, MemoryType
 
 
+def _iso_or_none(dt: Optional[datetime]) -> Optional[str]:
+    return dt.isoformat() if dt is not None else None
+
+
+def _parse_dt(value, fallback: Optional[datetime] = None) -> Optional[datetime]:
+    if value is None:
+        return fallback
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _to_payload(memory: Memory) -> dict:
+    return {
+        "text": memory.text,
+        "user_id": memory.user_id,
+        "memory_type": memory.memory_type.value,
+        "source": memory.source,
+        "metadata": memory.metadata,
+        "importance": memory.importance,
+        "created_at": memory.created_at.isoformat(),
+        "updated_at": memory.updated_at.isoformat(),
+        # Bi-temporal
+        "valid_from": memory.valid_from.isoformat(),
+        "valid_to": _iso_or_none(memory.valid_to),
+        "recorded_at": memory.recorded_at.isoformat(),
+        "superseded_by": memory.superseded_by,
+        # Provenance
+        "source_text": memory.source_text,
+        "turn_id": memory.turn_id,
+        "confidence": memory.confidence,
+        "extractor_model": memory.extractor_model,
+    }
+
+
+def _from_payload(payload: dict, point_id, user_id: str) -> Memory:
+    """Hydrate Memory from a Qdrant payload; old rows lacking new fields get defaults."""
+    created = _parse_dt(payload.get("created_at"))
+    fallback_dt = created or datetime.now(timezone.utc)
+    return Memory(
+        id=str(point_id),
+        text=payload.get("text", ""),
+        memory_type=MemoryType(payload.get("memory_type", "semantic")),
+        user_id=payload.get("user_id", user_id),
+        metadata=payload.get("metadata", {}) or {},
+        source=payload.get("source", "vector"),
+        importance=payload.get("importance", 0.5),
+        created_at=created or fallback_dt,
+        updated_at=_parse_dt(payload.get("updated_at"), fallback_dt) or fallback_dt,
+        valid_from=_parse_dt(payload.get("valid_from"), fallback_dt) or fallback_dt,
+        valid_to=_parse_dt(payload.get("valid_to")),
+        recorded_at=_parse_dt(payload.get("recorded_at"), fallback_dt) or fallback_dt,
+        superseded_by=payload.get("superseded_by"),
+        source_text=payload.get("source_text"),
+        turn_id=payload.get("turn_id"),
+        confidence=payload.get("confidence", 1.0),
+        extractor_model=payload.get("extractor_model"),
+    )
+
+
 class QdrantMemoryStore:
     """Full CRUD memory store backed by Qdrant."""
 
@@ -53,16 +116,7 @@ class QdrantMemoryStore:
         model = self._get_embedding_model()
 
         vector = model.encode(memory.text).tolist()
-
-        payload = {
-            "text": memory.text,
-            "user_id": memory.user_id,
-            "memory_type": memory.memory_type.value,
-            "source": memory.source,
-            "metadata": memory.metadata,
-            "created_at": memory.created_at.isoformat(),
-            "updated_at": memory.updated_at.isoformat(),
-        }
+        payload = _to_payload(memory)
 
         client.upsert(
             collection_name=self._collection,
@@ -76,6 +130,7 @@ class QdrantMemoryStore:
         user_id: str,
         k: int = 5,
         filters: Optional[dict] = None,
+        include_invalidated: bool = False,
     ) -> list[MemorySearchResult]:
         from qdrant_client.models import Filter, FieldCondition, MatchValue
 
@@ -84,35 +139,33 @@ class QdrantMemoryStore:
 
         query_vector = model.encode(query).tolist()
 
-        # Build Qdrant filter
         conditions = [FieldCondition(key="user_id", match=MatchValue(value=user_id))]
         if filters:
             for fk, fv in filters.items():
                 conditions.append(FieldCondition(key=f"metadata.{fk}", match=MatchValue(value=fv)))
 
+        # Over-fetch when we'll post-filter for bi-temporal
+        fetch_limit = k if include_invalidated else k * 4
+
         results = client.search(
             collection_name=self._collection,
             query_vector=query_vector,
             query_filter=Filter(must=conditions),
-            limit=k,
+            limit=fetch_limit,
         )
 
-        return [
+        hydrated = [
             MemorySearchResult(
-                memory=Memory(
-                    id=str(hit.id),
-                    text=hit.payload.get("text", ""),
-                    memory_type=MemoryType(hit.payload.get("memory_type", "semantic")),
-                    user_id=hit.payload.get("user_id", user_id),
-                    metadata=hit.payload.get("metadata", {}),
-                    source=hit.payload.get("source", "vector"),
-                ),
+                memory=_from_payload(hit.payload, hit.id, user_id),
                 score=hit.score,
                 source="vector",
             )
             for hit in results
             if hit.payload
         ]
+        if not include_invalidated:
+            hydrated = [r for r in hydrated if r.memory.is_current]
+        return hydrated[:k]
 
     async def update(self, memory_id: str, text: str) -> None:
         client = self._get_client()
@@ -133,31 +186,67 @@ class QdrantMemoryStore:
         client = self._get_client()
         client.delete(collection_name=self._collection, points_selector=[memory_id])
 
-    async def get_all(self, user_id: str, k: int = 50) -> list[MemorySearchResult]:
+    async def get_all(
+        self,
+        user_id: str,
+        k: int = 50,
+        include_invalidated: bool = False,
+    ) -> list[MemorySearchResult]:
         from qdrant_client.models import Filter, FieldCondition, MatchValue
 
         client = self._get_client()
+        fetch_limit = k if include_invalidated else k * 4
+
         results = client.scroll(
             collection_name=self._collection,
             scroll_filter=Filter(must=[
                 FieldCondition(key="user_id", match=MatchValue(value=user_id))
             ]),
-            limit=k,
+            limit=fetch_limit,
         )
 
-        return [
+        hydrated = [
             MemorySearchResult(
-                memory=Memory(
-                    id=str(point.id),
-                    text=point.payload.get("text", ""),
-                    memory_type=MemoryType(point.payload.get("memory_type", "semantic")),
-                    user_id=point.payload.get("user_id", user_id),
-                    metadata=point.payload.get("metadata", {}),
-                    source=point.payload.get("source", "vector"),
-                ),
+                memory=_from_payload(point.payload, point.id, user_id),
                 score=1.0,
                 source="vector",
             )
             for point in results[0]
             if point.payload
         ]
+        if not include_invalidated:
+            hydrated = [r for r in hydrated if r.memory.is_current]
+        return hydrated[:k]
+
+    async def invalidate(
+        self,
+        memory_id: str,
+        valid_to: datetime,
+        superseded_by: Optional[str] = None,
+    ) -> None:
+        client = self._get_client()
+        payload = {
+            "valid_to": valid_to.isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        if superseded_by is not None:
+            payload["superseded_by"] = superseded_by
+        client.set_payload(
+            collection_name=self._collection,
+            payload=payload,
+            points=[memory_id],
+        )
+
+    async def search_at(
+        self,
+        query: str,
+        user_id: str,
+        as_of: datetime,
+        k: int = 5,
+        filters: Optional[dict] = None,
+    ) -> list[MemorySearchResult]:
+        results = await self.search(
+            query, user_id, k=k * 4, filters=filters, include_invalidated=True
+        )
+        valid = [r for r in results if r.memory.is_valid_at(as_of)]
+        return valid[:k]

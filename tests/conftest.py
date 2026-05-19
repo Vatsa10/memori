@@ -1,6 +1,9 @@
 import pytest
 from memory_system.core.models import BotConfig, IntentDefinition, ConversationTurn
 
+# Script-style runner (uses asyncio.run via __main__); not a proper pytest module.
+collect_ignore = ["test_integration.py"]
+
 
 @pytest.fixture
 def sample_bot_config() -> BotConfig:

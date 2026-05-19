@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from typing import Any, Callable, Optional
+from uuid import uuid4
 
 from memory_system.core.memory_models import (
     ConversationSummary,
@@ -17,6 +18,7 @@ from memory_system.memory.extractor import extract_memories
 from memory_system.memory.lifecycle import decay_memories, consolidate_memories, cleanup_expired
 from memory_system.memory.profiles import build_user_profile
 from memory_system.memory.context import build_context_window
+from memory_system.memory.smart_ops import execute_decision, judge_memory_op
 
 
 class Memory:
@@ -41,6 +43,10 @@ class Memory:
         extraction_prompt: Optional[str] = None,
         dedup_threshold: float = 0.85,
         default_ttl: Optional[int] = None,
+        enable_smart_ops: bool = False,
+        smart_ops_k: int = 5,
+        smart_ops_model: Optional[str] = None,
+        smart_ops_prompt: Optional[str] = None,
     ):
         self.store = store
         self.graph = graph
@@ -49,6 +55,10 @@ class Memory:
         self.extraction_prompt = extraction_prompt
         self.dedup_threshold = dedup_threshold
         self.default_ttl = default_ttl
+        self.enable_smart_ops = enable_smart_ops
+        self.smart_ops_k = smart_ops_k
+        self.smart_ops_model = smart_ops_model or extraction_model
+        self.smart_ops_prompt = smart_ops_prompt
 
     # --- Core CRUD ---
 
@@ -137,6 +147,7 @@ class Memory:
         if not user_text:
             return MemoryExtractionResult()
 
+        turn_id = str(uuid4())
         extraction = await extract_memories(
             user_message=user_text,
             assistant_response=assistant_text,
@@ -144,18 +155,38 @@ class Memory:
             llm_fn=self.llm_fn,
             model=self.extraction_model,
             custom_prompt=self.extraction_prompt,
+            source_text=user_text,
+            turn_id=turn_id,
         )
 
-        # Store with dedup
+        # Store: smart_ops path (LLM-judged) or simple dedup path
         stored = []
         if self.store:
             for mem in extraction.memories:
                 mem.ttl = mem.ttl or self.default_ttl
-                if not await self._is_duplicate(mem):
-                    if session_id:
-                        mem.metadata["session_id"] = session_id
-                    await self.store.add(mem)
-                    stored.append(mem)
+                if session_id:
+                    mem.metadata["session_id"] = session_id
+
+                if self.enable_smart_ops and self.llm_fn:
+                    candidates = await self.store.search(
+                        mem.text, user_id=user_id, k=self.smart_ops_k
+                    )
+                    decision = await judge_memory_op(
+                        mem,
+                        candidates,
+                        llm_fn=self.llm_fn,
+                        model=self.smart_ops_model,
+                        prompt_template=self.smart_ops_prompt,
+                    )
+                    result = await execute_decision(
+                        decision, mem, candidates, self.store
+                    )
+                    if result is not None:
+                        stored.append(result)
+                else:
+                    if not await self._is_duplicate(mem):
+                        await self.store.add(mem)
+                        stored.append(mem)
 
         # Store entities and relationships
         if self.graph:
@@ -203,6 +234,25 @@ class Memory:
                 seen.add(key)
                 unique.append(r)
         return unique[:k]
+
+    async def recall_at(
+        self,
+        query: str,
+        user_id: str,
+        as_of: datetime,
+        k: int = 5,
+    ) -> list[MemorySearchResult]:
+        """Point-in-time recall: return memories that were valid at `as_of`."""
+        if not self.store:
+            return []
+        search_at = getattr(self.store, "search_at", None)
+        if search_at is not None:
+            return await search_at(query, user_id=user_id, as_of=as_of, k=k)
+        # Fallback: fetch all (including invalidated) then filter
+        results = await self.store.search(
+            query, user_id=user_id, k=k * 4, include_invalidated=True
+        )
+        return [r for r in results if r.memory.is_valid_at(as_of)][:k]
 
     async def forget(
         self,

@@ -17,6 +17,7 @@ class ExtractedFact(BaseModel):
     text: str
     memory_type: str = "semantic"  # semantic, episodic, procedural
     importance: float = 0.5  # 0.0-1.0
+    confidence: float = 0.8  # extractor's confidence in this fact
 
 
 class ExtractedEntity(BaseModel):
@@ -42,7 +43,9 @@ User: {user_message}
 Assistant: {assistant_response}
 
 Extract:
-1. FACTS: Key information worth remembering (user preferences, decisions, important details)
+1. FACTS: Key information worth remembering (user preferences, decisions, important details).
+   For each fact, also output `confidence` ∈ [0,1] reflecting how certain you are the fact is true
+   and worth storing (0.9+ = explicit statement; 0.5-0.7 = inferred; <0.5 = speculative).
 2. ENTITIES: Named things (people, products, places, concepts)
 3. RELATIONSHIPS: How entities relate (prefers, bought, lives_in, works_at)
 
@@ -57,6 +60,8 @@ async def extract_memories(
     llm_fn: Optional[Callable] = None,
     model: str = "groq/llama-3.1-8b-instant",
     custom_prompt: Optional[str] = None,
+    source_text: Optional[str] = None,
+    turn_id: Optional[str] = None,
 ) -> MemoryExtractionResult:
     """Extract facts, entities, and relationships from a conversation turn."""
 
@@ -100,6 +105,10 @@ async def extract_memories(
             user_id=user_id,
             source="chat",
             importance=max(0.0, min(1.0, fact.importance)),
+            source_text=source_text if source_text is not None else user_message,
+            turn_id=turn_id,
+            confidence=max(0.0, min(1.0, fact.confidence)),
+            extractor_model=model,
         ))
 
     entities = [

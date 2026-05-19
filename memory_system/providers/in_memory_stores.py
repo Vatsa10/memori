@@ -28,12 +28,15 @@ class InMemoryMemoryStore:
         user_id: str,
         k: int = 5,
         filters: Optional[dict] = None,
+        include_invalidated: bool = False,
     ) -> list[MemorySearchResult]:
         query_words = set(re.findall(r"\w+", query.lower()))
         scored = []
 
         for mem in self._memories.values():
             if mem.user_id != user_id:
+                continue
+            if not include_invalidated and mem.valid_to is not None:
                 continue
             if filters:
                 skip = False
@@ -62,12 +65,48 @@ class InMemoryMemoryStore:
     async def delete(self, memory_id: str) -> None:
         self._memories.pop(memory_id, None)
 
-    async def get_all(self, user_id: str, k: int = 50) -> list[MemorySearchResult]:
+    async def get_all(
+        self,
+        user_id: str,
+        k: int = 50,
+        include_invalidated: bool = False,
+    ) -> list[MemorySearchResult]:
         results = []
         for mem in self._memories.values():
-            if mem.user_id == user_id:
-                results.append(MemorySearchResult(memory=mem, score=1.0))
+            if mem.user_id != user_id:
+                continue
+            if not include_invalidated and mem.valid_to is not None:
+                continue
+            results.append(MemorySearchResult(memory=mem, score=1.0))
         return results[:k]
+
+    async def invalidate(
+        self,
+        memory_id: str,
+        valid_to: datetime,
+        superseded_by: Optional[str] = None,
+    ) -> None:
+        mem = self._memories.get(memory_id)
+        if mem is None:
+            return
+        mem.valid_to = valid_to
+        if superseded_by is not None:
+            mem.superseded_by = superseded_by
+        mem.updated_at = datetime.now(timezone.utc)
+
+    async def search_at(
+        self,
+        query: str,
+        user_id: str,
+        as_of: datetime,
+        k: int = 5,
+        filters: Optional[dict] = None,
+    ) -> list[MemorySearchResult]:
+        all_results = await self.search(
+            query, user_id, k=k * 4, filters=filters, include_invalidated=True
+        )
+        valid = [r for r in all_results if r.memory.is_valid_at(as_of)]
+        return valid[:k]
 
 
 class InMemoryGraphStore:

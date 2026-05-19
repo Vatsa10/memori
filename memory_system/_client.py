@@ -103,6 +103,11 @@ class MemorySystem:
         memory_top_k: int = 5,
         max_history_turns: int = 10,
         token_budget: int = 4000,
+        # Smart memory ops (LLM-judged ADD/UPDATE/MERGE/DELETE/NOOP)
+        enable_smart_ops: bool = False,
+        smart_ops_k: int = 5,
+        smart_ops_model: Optional[str] = None,
+        smart_ops_prompt: Optional[str] = None,
         # Analytics
         enable_analytics: bool = True,
     ):
@@ -132,6 +137,10 @@ class MemorySystem:
             llm_fn=extraction_llm_fn,
             extraction_model=extraction_model,
             dedup_threshold=dedup_threshold,
+            enable_smart_ops=enable_smart_ops,
+            smart_ops_k=smart_ops_k,
+            smart_ops_model=smart_ops_model,
+            smart_ops_prompt=smart_ops_prompt,
         )
 
         # Initialize intent-aware pipeline if BotConfig provided

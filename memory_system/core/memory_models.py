@@ -26,6 +26,16 @@ class Memory(BaseModel):
     expires_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Bi-temporal
+    valid_from: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    valid_to: Optional[datetime] = None
+    recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    superseded_by: Optional[str] = None
+    # Provenance
+    source_text: Optional[str] = None
+    turn_id: Optional[str] = None
+    confidence: float = 1.0
+    extractor_model: Optional[str] = None
 
     def model_post_init(self, __context):
         if self.ttl and not self.expires_at:
@@ -36,6 +46,17 @@ class Memory(BaseModel):
         if self.expires_at is None:
             return False
         return datetime.now(timezone.utc) >= self.expires_at
+
+    def is_valid_at(self, as_of: datetime) -> bool:
+        if self.valid_from > as_of:
+            return False
+        if self.valid_to is not None and self.valid_to <= as_of:
+            return False
+        return True
+
+    @property
+    def is_current(self) -> bool:
+        return self.valid_to is None
 
 
 class MemorySearchResult(BaseModel):

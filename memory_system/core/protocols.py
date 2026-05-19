@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Optional, Protocol, runtime_checkable
 
 from memory_system.core.models import ConversationTurn
@@ -21,13 +22,35 @@ class MemoryStore(Protocol):
         user_id: str,
         k: int = 5,
         filters: Optional[dict] = None,
+        include_invalidated: bool = False,
     ) -> list[MemorySearchResult]: ...
 
     async def update(self, memory_id: str, text: str) -> None: ...
 
     async def delete(self, memory_id: str) -> None: ...
 
-    async def get_all(self, user_id: str, k: int = 50) -> list[MemorySearchResult]: ...
+    async def get_all(
+        self,
+        user_id: str,
+        k: int = 50,
+        include_invalidated: bool = False,
+    ) -> list[MemorySearchResult]: ...
+
+    async def invalidate(
+        self,
+        memory_id: str,
+        valid_to: datetime,
+        superseded_by: Optional[str] = None,
+    ) -> None: ...
+
+    async def search_at(
+        self,
+        query: str,
+        user_id: str,
+        as_of: datetime,
+        k: int = 5,
+        filters: Optional[dict] = None,
+    ) -> list[MemorySearchResult]: ...
 
 
 @runtime_checkable
@@ -48,6 +71,15 @@ class GraphStore(Protocol):
         user_id: str,
         relation_type: Optional[str] = None,
     ) -> list[Relationship]: ...
+
+    async def traverse(
+        self,
+        start_entity: str,
+        user_id: str,
+        max_hops: int = 2,
+        relation_filter: Optional[list[str]] = None,
+        max_results: int = 20,
+    ) -> list[list[Relationship]]: ...
 
 
 @runtime_checkable
