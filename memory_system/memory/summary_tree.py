@@ -110,7 +110,7 @@ class SummaryTreeManager:
         self,
         memory_store: Any,
         llm_fn: Callable,
-        model: str = "groq/llama-3.1-8b-instant",
+        model: str = "gemini/gemini-2.5-flash-lite",
         session_to_day_hour: int = 2,
         day_to_month_day: int = 1,
         turn_summary_min_chars: int = 80,

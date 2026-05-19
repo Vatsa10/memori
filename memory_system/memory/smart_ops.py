@@ -75,7 +75,7 @@ async def judge_memory_op(
     new_fact: Memory,
     candidates: list[MemorySearchResult],
     llm_fn: Callable,
-    model: str = "groq/llama-3.1-8b-instant",
+    model: str = "deepseek/deepseek-v4-flash",
     prompt_template: Optional[str] = None,
 ) -> MemoryDecision:
     """Ask the LLM to choose ADD/UPDATE/MERGE/DELETE/NOOP for this new fact."""

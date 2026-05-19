@@ -80,7 +80,7 @@ class MemorySystem:
     def __init__(
         self,
         instructions: str = "You are a helpful AI assistant.",
-        model: str = "groq/llama-3.3-70b-versatile",
+        model: str = "deepseek/deepseek-v4-flash",
         *,
         llm_fn: Optional[Callable] = None,
         # Knowledge base (business docs, FAQs, policies)
@@ -91,7 +91,7 @@ class MemorySystem:
         graph_store: Optional[GraphStore] = None,
         # Extraction
         extraction_llm_fn: Optional[Callable] = None,
-        extraction_model: str = "groq/llama-3.1-8b-instant",
+        extraction_model: str = "deepseek/deepseek-v4-flash",
         dedup_threshold: float = 0.85,
         # Session
         session_store: Optional[SessionStore] = None,
@@ -173,10 +173,12 @@ class MemorySystem:
         elif enable_summary_tree and memory_store is not None:
             from memory_system.memory.summary_tree import SummaryTreeManager
 
+            # Summary rollups: Gemini 2.5 Flash-Lite wins on input cost ($0.10/M)
+            # and long context handles full session/day windows in a single call.
             self._summary_tree = SummaryTreeManager(
                 memory_store=memory_store,
                 llm_fn=extraction_llm_fn or llm_fn,
-                model=extraction_model,
+                model="gemini/gemini-2.5-flash-lite",
             )
         else:
             self._summary_tree = None

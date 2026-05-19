@@ -9,8 +9,8 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     # Default Models
-    intent_model: str = "groq/llama-3.1-8b-instant"
-    generation_model: str = "groq/llama-3.3-70b-versatile"
+    intent_model: str = "deepseek/deepseek-v4-flash"
+    generation_model: str = "deepseek/deepseek-v4-flash"
 
     # Qdrant
     qdrant_url: str = "http://localhost:6333"

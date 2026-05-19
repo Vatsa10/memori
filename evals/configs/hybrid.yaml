@@ -1,0 +1,10 @@
+# Ablation: + Hybrid retrieval (P1.4) + cross-encoder rerank (P1.5) + multi-hop graph (P1.6)
+# Tests retrieval quality improvements. Biggest impact on multi-hop / rare-term probes.
+name: hybrid
+description: Baseline + BM25/dense/graph RRF fusion + bge-reranker + 2-hop graph.
+features:
+  enable_smart_ops: false
+  enable_summary_tree: false
+  use_hybrid_retriever: true
+  use_reranker: true
+  graph_max_hops: 2

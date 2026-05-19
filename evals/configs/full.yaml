@@ -1,0 +1,10 @@
+# Ablation: FULL — every P0/P1/P2 feature enabled.
+# This is the headline number for benchmarking against Mem0/Graphiti/Supermemory.
+name: full
+description: Smart ops + hybrid + rerank + 2-hop graph + summary tree.
+features:
+  enable_smart_ops: true
+  enable_summary_tree: true
+  use_hybrid_retriever: true
+  use_reranker: true
+  graph_max_hops: 2

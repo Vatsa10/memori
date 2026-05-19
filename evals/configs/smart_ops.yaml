@@ -1,0 +1,11 @@
+# Ablation: + Smart memory ops (P0.1)
+# Tests Mem0-parity contradiction handling. Most impact on LongMemEval
+# "knowledge-update" category.
+name: smart_ops
+description: Baseline + LLM-judged ADD/UPDATE/MERGE/DELETE/NOOP.
+features:
+  enable_smart_ops: true
+  enable_summary_tree: false
+  use_hybrid_retriever: false
+  use_reranker: false
+  graph_max_hops: 1

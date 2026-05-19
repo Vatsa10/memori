@@ -1,0 +1,11 @@
+# Ablation: + Hierarchical summary tree (P2.9)
+# Tests cross-session / temporal recall via coarse-to-fine summarization.
+# Biggest impact on LoCoMo multi-session questions.
+name: summaries
+description: Baseline + turn/session/day rollups + search_hierarchical.
+features:
+  enable_smart_ops: false
+  enable_summary_tree: true
+  use_hybrid_retriever: false
+  use_reranker: false
+  graph_max_hops: 1

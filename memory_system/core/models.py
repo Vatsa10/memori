@@ -26,8 +26,8 @@ class BotConfig(BaseModel):
     base_instructions: str  # Always included (identity, tone, constraints)
     intents: list[IntentDefinition]
     fallback_instructions: str = ""
-    intent_model: str = "groq/llama-3.1-8b-instant"
-    generation_model: str = "groq/llama-3.3-70b-versatile"
+    intent_model: str = "deepseek/deepseek-v4-flash"
+    generation_model: str = "deepseek/deepseek-v4-flash"
     confidence_threshold: float = 0.6
     keyword_threshold: float = 0.4  # Min keyword overlap score to skip LLM
     embedding_threshold: float = 0.7  # Min cosine similarity to skip LLM

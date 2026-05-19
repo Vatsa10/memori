@@ -124,7 +124,7 @@ class IntentDiscovery:
         self,
         messages: list[str],
         llm_fn: Optional[Callable] = None,
-        model: str = "groq/llama-3.1-8b-instant",
+        model: str = "deepseek/deepseek-v4-flash",
         n_clusters: Optional[int] = None,
     ) -> DiscoveryResult:
         """Discover intents with LLM polish for names, descriptions, and instructions."""

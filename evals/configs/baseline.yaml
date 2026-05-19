@@ -1,0 +1,10 @@
+# Ablation: BASELINE — vanilla MemorySystem.
+# All P0/P1/P2 features disabled. Establishes the floor.
+name: baseline
+description: Vanilla recall (dense only), no smart_ops, no rerank, no summaries.
+features:
+  enable_smart_ops: false
+  enable_summary_tree: false
+  use_hybrid_retriever: false
+  use_reranker: false
+  graph_max_hops: 1

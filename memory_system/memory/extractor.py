@@ -58,7 +58,7 @@ async def extract_memories(
     assistant_response: str,
     user_id: str,
     llm_fn: Optional[Callable] = None,
-    model: str = "groq/llama-3.1-8b-instant",
+    model: str = "deepseek/deepseek-v4-flash",
     custom_prompt: Optional[str] = None,
     source_text: Optional[str] = None,
     turn_id: Optional[str] = None,

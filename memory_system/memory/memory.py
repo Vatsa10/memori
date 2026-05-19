@@ -39,7 +39,7 @@ class Memory:
         store: Optional[MemoryStore] = None,
         graph: Optional[GraphStore] = None,
         llm_fn: Optional[Callable] = None,
-        extraction_model: str = "groq/llama-3.1-8b-instant",
+        extraction_model: str = "deepseek/deepseek-v4-flash",
         extraction_prompt: Optional[str] = None,
         dedup_threshold: float = 0.85,
         default_ttl: Optional[int] = None,

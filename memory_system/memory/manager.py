@@ -25,7 +25,7 @@ class MemoryManager:
         memory_store: Optional[MemoryStore] = None,
         graph_store: Optional[GraphStore] = None,
         extraction_llm_fn: Optional[Callable] = None,
-        extraction_model: str = "groq/llama-3.1-8b-instant",
+        extraction_model: str = "deepseek/deepseek-v4-flash",
         dedup_threshold: float = 0.85,
     ):
         self.memory_store = memory_store

@@ -18,7 +18,7 @@ async def memory_system_completion(
         from memory_system.integrations.litellm_wrapper import memory_system_completion
 
         response = await memory_system_completion(
-            model="groq/llama-3.3-70b-versatile",
+            model="deepseek/deepseek-v4-flash",
             messages=[{"role": "user", "content": "Where is my order?"}],
             bot_config="my_bot.yaml",
         )
