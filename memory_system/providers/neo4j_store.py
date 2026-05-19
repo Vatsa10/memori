@@ -133,6 +133,64 @@ class Neo4jGraphStore:
                 ))
             return relationships
 
+    async def traverse(
+        self,
+        start_entity: str,
+        user_id: str,
+        max_hops: int = 2,
+        relation_filter: Optional[list[str]] = None,
+        max_results: int = 20,
+    ) -> list[list[Relationship]]:
+        """Variable-length path walk over outgoing relationships."""
+        if max_hops < 1:
+            return []
+
+        driver = self._get_driver()
+        # Cypher variable-length paths don't take a parameter for the bound,
+        # so interpolate after clamping (1..50 sane range).
+        hops = max(1, min(int(max_hops), 50))
+        cypher = (
+            f"MATCH path = (a:Entity {{name: $name, user_id: $user_id}})"
+            f"-[rels:RELATES_TO*1..{hops}]->(b:Entity) "
+            "WHERE ALL(rel IN rels WHERE rel.user_id IS NULL OR rel.user_id = $user_id) "
+            + (
+                "AND ALL(rel IN rels WHERE rel.type IN $relations) "
+                if relation_filter
+                else ""
+            )
+            + "RETURN [rel IN rels | {source: startNode(rel).name, "
+            "target: endNode(rel).name, rel_type: rel.type, props: properties(rel)}] AS path "
+            "LIMIT $max"
+        )
+
+        with driver.session() as session:
+            result = session.run(
+                cypher,
+                name=start_entity,
+                user_id=user_id,
+                max=max_results,
+                relations=relation_filter or [],
+            )
+            paths: list[list[Relationship]] = []
+            for record in result:
+                hops_data = record["path"]
+                rels = []
+                for hop in hops_data:
+                    props = dict(hop.get("props", {}) or {})
+                    props.pop("type", None)
+                    rels.append(
+                        Relationship(
+                            source_entity=hop["source"],
+                            target_entity=hop["target"],
+                            relation_type=hop["rel_type"] or "related",
+                            user_id=user_id,
+                            properties=props,
+                        )
+                    )
+                if rels:
+                    paths.append(rels)
+            return paths
+
     def close(self):
         if self._driver:
             self._driver.close()

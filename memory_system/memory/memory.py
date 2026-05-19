@@ -207,23 +207,48 @@ class Memory:
         user_id: str,
         k: int = 5,
         context: Optional[str] = None,
+        graph_max_hops: int = 1,
     ) -> list[MemorySearchResult]:
-        """Search memories with optional context augmentation."""
+        """Search memories with optional context augmentation.
+
+        When the graph store implements multi-hop `traverse`, paths up to
+        `graph_max_hops` are surfaced as synthetic results (text formatted as
+        ``A [rel] B -> B [rel] C``, score decayed per hop).
+        """
         search_query = f"{context}: {query}" if context else query
         results = await self.search(search_query, user_id=user_id, k=k)
 
         # Also search graph for related entities
         if self.graph:
             entities = await self.graph.search_entities(query, user_id=user_id, k=3)
+            traverse = getattr(self.graph, "traverse", None) if graph_max_hops > 1 else None
             for entity in entities:
-                rels = await self.graph.get_related(entity.name, user_id=user_id)
-                for rel in rels:
-                    text = f"{rel.source_entity} {rel.relation_type} {rel.target_entity}"
-                    graph_mem = MemoryModel(
-                        text=text, memory_type=MemoryType.SEMANTIC,
-                        user_id=user_id, source="graph",
+                if traverse is not None:
+                    paths = await traverse(
+                        entity.name, user_id=user_id, max_hops=graph_max_hops
                     )
-                    results.append(MemorySearchResult(memory=graph_mem, score=0.7, source="graph"))
+                    for path in paths:
+                        text = " -> ".join(
+                            f"{r.source_entity} [{r.relation_type}] {r.target_entity}"
+                            for r in path
+                        )
+                        score = 0.7 * (0.8 ** (len(path) - 1))
+                        graph_mem = MemoryModel(
+                            text=text, memory_type=MemoryType.SEMANTIC,
+                            user_id=user_id, source="graph",
+                        )
+                        results.append(
+                            MemorySearchResult(memory=graph_mem, score=score, source="graph")
+                        )
+                else:
+                    rels = await self.graph.get_related(entity.name, user_id=user_id)
+                    for rel in rels:
+                        text = f"{rel.source_entity} {rel.relation_type} {rel.target_entity}"
+                        graph_mem = MemoryModel(
+                            text=text, memory_type=MemoryType.SEMANTIC,
+                            user_id=user_id, source="graph",
+                        )
+                        results.append(MemorySearchResult(memory=graph_mem, score=0.7, source="graph"))
 
         # Deduplicate
         seen = set()

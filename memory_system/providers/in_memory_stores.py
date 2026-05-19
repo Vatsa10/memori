@@ -153,3 +153,42 @@ class InMemoryGraphStore:
                 if relation_type is None or rel.relation_type == relation_type:
                     results.append(rel)
         return results
+
+    async def traverse(
+        self,
+        start_entity: str,
+        user_id: str,
+        max_hops: int = 2,
+        relation_filter: Optional[list[str]] = None,
+        max_results: int = 20,
+    ) -> list[list[Relationship]]:
+        """BFS over outgoing relationships, returning paths up to max_hops."""
+        if max_hops < 1:
+            return []
+
+        # Pre-index outgoing rels for this user
+        outgoing: dict[str, list[Relationship]] = {}
+        for rel in self._relationships:
+            if rel.user_id != user_id:
+                continue
+            if relation_filter and rel.relation_type not in relation_filter:
+                continue
+            outgoing.setdefault(rel.source_entity, []).append(rel)
+
+        paths: list[list[Relationship]] = []
+        # Each frontier item: (current_node, path_so_far, visited_nodes)
+        frontier = [(start_entity, [], {start_entity})]
+        while frontier and len(paths) < max_results:
+            node, path, visited = frontier.pop(0)
+            if len(path) >= max_hops:
+                continue
+            for rel in outgoing.get(node, []):
+                next_node = rel.target_entity
+                if next_node in visited:
+                    continue  # cycle
+                new_path = path + [rel]
+                paths.append(new_path)
+                if len(paths) >= max_results:
+                    break
+                frontier.append((next_node, new_path, visited | {next_node}))
+        return paths
